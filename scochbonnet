@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>මඩුල්ල ප්‍රාදේශීය සභාව - දෛනික ආදායම් පද්ධතිය</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans">
+
+    <header class="bg-blue-900 text-white shadow-md py-4 px-6 mb-6">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl md:text-2xl font-bold">මඩුල්ල ප්‍රාදේශීය සභාව - දෛනික ආදායම් කළමනාකරණය</h1>
+            <span id="current-date" class="text-sm bg-blue-800 px-3 py-1 rounded"></span>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 pb-12">
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500">
+                <p class="text-gray-500 text-sm font-semibold">අද දින මුළු ආදායම</p>
+                <h2 id="total-income-display" class="text-3xl font-bold text-green-600 mt-2">Rs. 0.00</h2>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500">
+                <p class="text-gray-500 text-sm font-semibold">අද සටහන් කළ ගනුදෙනු ගණන</p>
+                <h2 id="total-transactions" class="text-3xl font-bold text-blue-600 mt-2">0</h2>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-md no-print">
+                <p class="text-gray-500 text-sm font-semibold mb-2">දත්ත කළමනාකරණය</p>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="exportCSV()" class="text-xs bg-green-100 text-green-700 px-3 py-2 rounded hover:bg-green-200 transition">CSV බාගන්න</button>
+                    <button onclick="window.print()" class="text-xs bg-blue-100 text-blue-700 px-3 py-2 rounded hover:bg-blue-200 transition">මුද්‍රණය</button>
+                    <button onclick="clearData()" class="text-xs bg-red-100 text-red-600 px-3 py-2 rounded hover:bg-red-200 transition">අද දත්ත ඉවත් කරන්න</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+            <!-- Left: Services + Form -->
+            <div class="lg:col-span-7 bg-white p-6 rounded-xl shadow-md no-print">
+                <h2 class="text-lg font-bold text-gray-800 mb-3 border-b pb-2">1. සේවාව / ආදායම් මාර්ගය තෝරන්න</h2>
+
+                <!-- Search Box -->
+                <div class="mb-3">
+                    <input type="text" id="service-search" oninput="filterButtons()" placeholder="සේවාව නමින් සොයන්න..." class="w-full bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+
+                <!-- Services Grid -->
+                <div id="services-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 p-1 mb-6 border rounded-lg bg-gray-50"></div>
+
+                <form id="income-form" onsubmit="handleFormSubmit(event)" class="space-y-4 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">තෝරාගත් සේවාව:</label>
+                        <input type="text" id="selected-service" readonly placeholder="ඉහත ලැයිස්තුවෙන් එකක් ක්ලික් කරන්න..." class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-800 font-semibold focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">එකතු වූ මුදල (Rs.):</label>
+                        <input type="number" id="income-amount" step="0.01" min="0" required placeholder="උදා: 1500" class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">විස්තර / රිසිට් අංකය (අවශ්‍ය නම්):</label>
+                        <input type="text" id="income-desc" placeholder="රිසිට් අංකය හෝ නම..." class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg transition shadow">
+                        මුදල ඇතුළත් කරන්න (Submit)
+                    </button>
+                </form>
+            </div>
+
+            <!-- Right: Transactions + Summary -->
+            <div class="lg:col-span-5 space-y-8">
+                <div class="bg-white p-6 rounded-xl shadow-md flex flex-col">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">2. අද දින වාර්තාව (Transactions)</h2>
+                    <div class="overflow-x-auto overflow-y-auto flex-grow max-h-[420px]">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-gray-100 text-gray-600 border-b">
+                                    <th class="p-2.5">සේවාව</th>
+                                    <th class="p-2.5">විස්තර</th>
+                                    <th class="p-2.5 text-right">මුදල (Rs.)</th>
+                                    <th class="p-2.5 no-print"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactions-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">3. සේවාව අනුව අද එකතුව</h2>
+                    <div class="overflow-y-auto max-h-[300px]">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <tbody id="summary-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const servicesList = [
+            "ළමා උද්‍යානය", "පොළආදායම මාරිඅරාව", "වීදි රේඛා", "ගොඩනැගිලි සැලසුම්",
+            "අනුකූලතා සහතික", "ඉඩම් අනු කොටස් කිරීම", "ශ්‍රවණාගාරය", "සංචාරක නිවාඩු නිකේතනය",
+            "ජල ආදායම", "ආදානාගාරය", "කැනපි", "පුටු", "කොඩි කණු",
+            "නෙස්කැෆේ මැෂින්", "බුෆේසෙට්", "ක්‍රීඩාංගනය", "විනෝද බදු",
+            "ප්‍රචාරක පුවරු", "දැන්වීම් පුවරු", "වෙළඳ බලපත්‍ර", "ව්‍යාපාර බදු",
+            "කඩ කුලී", "ජංගම වෙළඳ කුටි", "කසල ආදායම", "බැකෝ ලෝඩරය",
+            "මෝටර් ග්‍රේඩරය", "ටිපර් රථය", "ට්‍රැක්ටර් රථය", "අවමංගල්‍ය රථය",
+            "ලොරි ජල බවුසරය", "ට්‍රැක්ටර් ජල බවුසරය", "පරිසර බලපත්‍ර", "හෙළ බොජුන්හල",
+            "බස් ස්ටෑන්ඩ්", "වැලි", "මාර්ග භාවිතය", "පුස්තකාල සාමාජික ගාස්තු",
+            "මුද්දර ගාස්තු", "කසල විකුණුම්", "දිවා සුරැකුම් මධ්‍යස්ථානය", "පෙරපාසල",
+            "නගුල", "මික්ස්චර් යන්තරය", "වැකර් යන්ත්‍රය"
+        ];
+
+        const STORAGE_KEY = 'madulla_transactions';
+        let selectedService = "";
+        let transactions = loadTransactions();
+
+        function loadTransactions() {
+            try {
+                const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+                return Array.isArray(data) ? data : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function todayKey() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatMoney(n) {
+            return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        document.getElementById('current-date').innerText =
+            new Date().toLocaleDateString('si-LK', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        function renderButtons(filterText = '') {
+            const grid = document.getElementById('services-grid');
+            grid.innerHTML = '';
+
+            const filtered = servicesList.filter(s => s.toLowerCase().includes(filterText.toLowerCase()));
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-3 text-center p-4 text-gray-400 text-xs">සේවාවක් හමු නොවීය.</div>`;
+                return;
+            }
+
+            filtered.forEach(service => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = service;
+                btn.className = 'p-2 text-xs font-medium text-center rounded-lg border transition ' +
+                    (selectedService === service
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-blue-50 hover:border-blue-400');
+                btn.onclick = () => selectService(service);
+                grid.appendChild(btn);
+            });
+        }
+
+        function filterButtons() {
+            renderButtons(document.getElementById('service-search').value);
+        }
+
+        // සේවාවක් තෝරද්දී සෙවුම පිරිසිදු කරයි
+        function selectService(service) {
+            selectedService = service;
+            document.getElementById('selected-service').value = service;
+            document.getElementById('service-search').value = '';
+            renderButtons();
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const amountInput = document.getElementById('income-amount');
+            const descInput = document.getElementById('income-desc');
+
+            if (!selectedService) {
+                alert('කරුණාකර පළමුව ලැයිස්තුවෙන් සේවාවක් (බටන් එකක්) තෝරන්න!');
+                return;
+            }
+
+            const amount = parseFloat(amountInput.value);
+            if (isNaN(amount) || amount <= 0) {
+                alert('කරුණාකර නිවැරදි මුදලක් ඇතුළත් කරන්න!');
+                return;
+            }
+
+            transactions.unshift({
+                id: Date.now(),
+                date: todayKey(),
+                service: selectedService,
+                amount: amount,
+                desc: descInput.value.trim() || '-',
+                time: new Date().toLocaleTimeString('si-LK', { hour: '2-digit', minute: '2-digit' })
+            });
+            saveAndRefresh();
+
+            amountInput.value = '';
+            descInput.value = '';
+            amountInput.focus();
+        }
+
+        function saveAndRefresh() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+            } catch (e) {
+                alert('දත්ත සුරැකීමට නොහැකි විය.');
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            const today = todayKey();
+            const todays = transactions.filter(t => t.date === today);
+            const listContainer = document.getElementById('transactions-list');
+            const summaryContainer = document.getElementById('summary-list');
+            listContainer.innerHTML = '';
+            summaryContainer.innerHTML = '';
+
+            let total = 0;
+            const byService = {};
+
+            if (todays.length === 0) {
+                listContainer.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-gray-400">අද දින තවම දත්ත ඇතුළත් කර නැත.</td></tr>`;
+                summaryContainer.innerHTML = `<tr><td class="text-center p-4 text-gray-400">දත්ත නැත.</td></tr>`;
+            }
+
+            todays.forEach(tx => {
+                total += tx.amount;
+                byService[tx.service] = (byService[tx.service] || 0) + tx.amount;
+
+                const row = document.createElement('tr');
+                row.className = 'border-b hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="p-2.5 font-medium text-gray-800">${escapeHtml(tx.service)}</td>
+                    <td class="p-2.5 text-gray-500 text-xs">${escapeHtml(tx.desc)}<br><span class="text-[10px] text-gray-400">${escapeHtml(tx.time)}</span></td>
+                    <td class="p-2.5 text-right font-semibold text-green-600">Rs. ${formatMoney(tx.amount)}</td>
+                    <td class="p-2.5 text-right no-print"><button onclick="deleteTx(${tx.id})" class="text-red-500 hover:text-red-700 text-xs" title="මකන්න">✕</button></td>
+                `;
+                listContainer.appendChild(row);
+            });
+
+            Object.entries(byService)
+                .sort((a, b) => b[1] - a[1])
+                .forEach(([service, sum]) => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b';
+                    row.innerHTML = `
+                        <td class="p-2.5 text-gray-800">${escapeHtml(service)}</td>
+                        <td class="p-2.5 text-right font-semibold text-blue-700">Rs. ${formatMoney(sum)}</td>
+                    `;
+                    summaryContainer.appendChild(row);
+                });
+
+            document.getElementById('total-income-display').innerText = `Rs. ${formatMoney(total)}`;
+            document.getElementById('total-transactions').innerText = todays.length;
+        }
+
+        function deleteTx(id) {
+            if (confirm('මෙම ගනුදෙනුව මකා දැමීමට අවශ්‍යද?')) {
+                transactions = transactions.filter(t => t.id !== id);
+                saveAndRefresh();
+            }
+        }
+
+        function clearData() {
+            if (confirm('ඔබට සැබැවින්ම අද දින ඇතුළත් කළ සියලුම දත්ත මකා දැමීමට අවශ්‍යද?')) {
+                const today = todayKey();
+                transactions = transactions.filter(t => t.date !== today);
+                saveAndRefresh();
+            }
+        }
+
+        function exportCSV() {
+            if (transactions.length === 0) {
+                alert('බාගැනීමට දත්ත නැත.');
+                return;
+            }
+            const esc = v => `"${String(v).replace(/"/g, '""')}"`;
+            const rows = [['දිනය', 'වේලාව', 'සේවාව', 'විස්තර', 'මුදල (Rs.)'].map(esc).join(',')];
+            transactions.slice().reverse().forEach(t => {
+                rows.push([t.date || '', t.time, t.service, t.desc, t.amount.toFixed(2)].map(esc).join(','));
+            });
+            const blob = new Blob(['\uFEFF' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `madulla_income_${todayKey()}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        }
+
+        renderButtons();
+        updateUI();
+    </script>
+</body>
+</html>
